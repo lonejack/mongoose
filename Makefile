@@ -120,6 +120,13 @@ valgrind: Makefile mongoose.h mongoose.c
 	$(CC) $(SRCS) $(VALGRIND_CFLAGS) $(LDFLAGS) -g -o unit_test
 	$(VALGRIND_RUN) ./unit_test
 
+misra:
+	cppcheck --addon=misra -DMG_ARCH=MG_ARCH_UNIX -DMG_ENABLE_PACKED_FS=1 -DMG_ENABLE_SSI=1 mongoose.c >/tmp/x 2>&1
+	cppcheck --addon=misra -DMG_ARCH=MG_ARCH_CUSTOM -DMG_ENABLE_LINES=1 -DTLS=MG_TLS_BUILTIN -DMG_ENABLE_TCPIP=1 mongoose.c  >>/tmp/x 2>&1
+	cppcheck --addon=misra --clang -DMG_ENABLE_LINES=1 -DTLS=MG_TLS_BUILTIN -DMG_ENABLE_TCPIP=1 mongoose.c  >>/tmp/x 2>&1
+	cppcheck --addon=misra --clang -DMG_ENABLE_LINES=1 -DMG_ENABLE_SSI=1 mongoose.c  >>/tmp/x 2>&1
+	less /tmp/x
+
 armhf: ASAN=
 armhf: IPV6=0
 armhf: CC = $(DOCKER) mdashnet/armhf cc
@@ -132,11 +139,11 @@ s390: CC = $(DOCKER) mdashnet/s390 cc
 s390: RUN = $(DOCKER) mdashnet/s390
 s390: test
 
-arm: DEFS += -DMG_ENABLE_FILE=0 -DMG_ENABLE_TCPIP=1 -DMG_ARCH=MG_ARCH_NEWLIB 
+arm: DEFS += -DMG_ENABLE_POSIX_FS=0 -DMG_ENABLE_TCPIP=1 -DMG_ARCH=MG_ARCH_NEWLIB 
 arm: mongoose.h $(SRCS)
 	$(DOCKER) mdashnet/armgcc arm-none-eabi-gcc -mcpu=cortex-m3 -mthumb $(SRCS) $(OPTS) $(WARN) $(INCS) $(DEFS) $(TFLAGS) -o unit_test -nostartfiles --specs nosys.specs -e 0
 
-riscv: DEFS += -DMG_ENABLE_FILE=0 -DMG_ENABLE_TCPIP=1 -DMG_ARCH=MG_ARCH_NEWLIB 
+riscv: DEFS += -DMG_ENABLE_POSIX_FS=0 -DMG_ENABLE_TCPIP=1 -DMG_ARCH=MG_ARCH_NEWLIB 
 riscv: mongoose.h $(SRCS)
 	$(DOCKER) mdashnet/riscv riscv-none-elf-gcc -march=rv32imc -mabi=ilp32 $(SRCS) $(OPTS) $(WARN) $(INCS) $(DEFS) $(TFLAGS) -o unit_test
 
@@ -174,7 +181,7 @@ uninstall:
 	rm -rf $(DESTDIR)$(LIBDIR)/libmongoose.a $(DESTDIR)$(LIBDIR)/libmongoose.so.$(VERSION) $(DESTDIR)$(INCLUDEDIR)/mongoose.h $(DESTDIR)$(LIBDIR)/libmongoose.so
 
 mongoose.c: Makefile $(wildcard src/*.c) $(wildcard src/drivers/*.c)
-	(cat src/license.h; echo; echo '#include "mongoose.h"' ; (for F in src/*.c src/drivers/*.c ; do echo; echo '#ifdef MG_ENABLE_LINES'; echo "#line 1 \"$$F\""; echo '#endif'; cat $$F | sed -e 's,#include ".*,,'; done))> $@
+	(export LC_ALL=C ; cat src/license.h; echo; echo '#include "mongoose.h"' ; (for F in src/*.c src/drivers/*.c ; do echo; echo '#ifdef MG_ENABLE_LINES'; echo "#line 1 \"$$F\""; echo '#endif'; cat $$F | sed -e 's,#include ".*,,'; done))> $@
 
 mongoose.h: $(HDRS) Makefile
 	(cat src/license.h; echo; echo '#ifndef MONGOOSE_H'; echo '#define MONGOOSE_H'; echo; cat src/version.h ; echo; echo '#ifdef __cplusplus'; echo 'extern "C" {'; echo '#endif'; cat src/arch.h src/arch_*.h src/net_ft.h src/net_lwip.h src/net_rl.h src/config.h src/str.h src/queue.h src/fmt.h src/printf.h src/log.h src/timer.h src/fs.h src/util.h src/url.h src/iobuf.h src/base64.h src/md5.h src/sha1.h src/sha256.h src/tls_aes128.h src/tls_uecc.h src/event.h src/net.h src/http.h src/ssi.h src/tls.h src/tls_mbed.h src/tls_openssl.h src/ws.h src/sntp.h src/mqtt.h src/dns.h src/json.h src/rpc.h src/ota.h src/device.h src/net_builtin.h src/profile.h src/drivers/*.h | sed -e '/keep/! s,#include ".*,,' -e 's,^#pragma once,,'; echo; echo '#ifdef __cplusplus'; echo '}'; echo '#endif'; echo '#endif  // MONGOOSE_H')> $@
