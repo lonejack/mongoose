@@ -2,13 +2,11 @@
 
 #include "arch.h"
 
+// Describes an arbitrary chunk of memory
 struct mg_str {
-  const char *ptr;  // Pointer to string data
-  size_t len;       // String len
+  char *buf;   // String data
+  size_t len;  // String length
 };
-
-#define MG_C_STR(a) \
-  { (a), sizeof(a) - 1 }
 
 // Using macro to avoid shadowing C++ struct constructor, see #1298
 #define mg_str(s) mg_str_s(s)
@@ -30,4 +28,4 @@ bool mg_span(struct mg_str s, struct mg_str *a, struct mg_str *b, char delim);
 char *mg_hex(const void *buf, size_t len, char *dst);
 void mg_unhex(const char *buf, size_t len, unsigned char *to);
 unsigned long mg_unhexn(const char *s, size_t len);
-bool mg_path_is_sane(const char *path);
+bool mg_path_is_sane(const struct mg_str path);
